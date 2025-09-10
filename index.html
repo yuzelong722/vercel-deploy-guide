@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>智海导购客服平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar" role="navigation" aria-label="主导航">
+        <div class="brand">
+          <div class="brand-logo-container">
+            <img src="assets/logo.svg" alt="智海" class="brand-logo" />
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">智海客服</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <button class="nav-item" data-route="home" title="首页">
+            <div class="nav-icon">🏠</div>
+            <span class="nav-label">首页</span>
+          </button>
+          <button class="nav-item" data-route="agent" title="agent监控">
+            <div class="nav-icon">🖥️</div>
+            <span class="nav-label">Agent监控</span>
+          </button>
+          <button class="nav-item" data-route="messages" title="服务消息">
+            <div class="nav-icon-container">
+              <div class="nav-icon">💬</div>
+              <div class="notification-dot"></div>
+            </div>
+            <span class="nav-label">服务消息</span>
+          </button>
+          <button class="nav-item" data-route="support" title="二线客服">
+            <div class="nav-icon">🎧</div>
+            <span class="nav-label">二线客服</span>
+          </button>
+          <button class="nav-item is-active" data-route="knowledge" title="知识管理">
+            <div class="nav-icon">📁</div>
+            <span class="nav-label">知识管理</span>
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <span class="version">v0.1.0</span>
+        </div>
+      </aside>
+
+      <main id="main" class="main" role="main">
+        <header class="topbar">
+          <h1 id="view-title" class="view-title">首页</h1>
+          <div class="topbar-actions">
+            <input id="global-search" class="search" placeholder="搜索…" aria-label="搜索" />
+          </div>
+        </header>
+        <section id="view-container" class="view-container" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="modal-overlay" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">添加商品</h3>
+          <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        
+        <div class="modal-content">
+          <!-- Step 1: Selection -->
+          <div class="selection-section" id="selectionStep">
+            <h4 class="section-title">选择添加方式</h4>
+            
+            <div class="selection-options">
+              <div class="option-card selected" data-option="smart-recognition">
+                <div class="option-icon smart-icon">🔍</div>
+                <div class="option-content">
+                  <h5 class="option-title">智能识别</h5>
+                  <p class="option-description">输入店铺链接自动识别商品</p>
+                  <ul class="option-features">
+                    <li>支持主流电商平台</li>
+                    <li>自动提取商品信息</li>
+                    <li>快速批量导入</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="option-card" data-option="batch-import">
+                <div class="option-icon batch-icon">📤</div>
+                <div class="option-content">
+                  <h5 class="option-title">批量导入</h5>
+                  <p class="option-description">上传Excel文件批量导入</p>
+                  <ul class="option-features">
+                    <li>支持Excel/CSV格式</li>
+                    <li>提供标准模板</li>
+                    <li>数据验证检查</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Step 2: Smart Recognition -->
+          <div class="smart-recognition-section" id="smartRecognitionStep" style="display: none;">
+            <div class="step-header">
+              <button class="back-btn" id="backToSelection">←</button>
+              <h4 class="section-title">智能识别</h4>
+            </div>
+            
+            <div class="input-section">
+              <label class="input-label">店铺链接地址 *</label>
+              <input type="text" class="link-input" placeholder="请输入店铺或商品页面链接" />
+              <p class="platform-support">支持淘宝、天猫、京东等主流电商平台链接</p>
+            </div>
+            
+            <div class="instructions-box">
+              <h5 class="instructions-title">识别说明</h5>
+              <ul class="instructions-list">
+                <li>系统将自动分析页面内容,提取商品信息</li>
+                <li>识别过程可能需要1-2分钟,请耐心等待</li>
+                <li>识别完成后,您可以预览和编辑商品信息</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Step 2: Batch Import -->
+          <div class="batch-import-section" id="batchImportStep" style="display: none;">
+            <div class="step-header">
+              <button class="back-btn" id="backToSelectionBatch">←</button>
+              <h4 class="section-title">批量导入</h4>
+            </div>
+            
+            <div class="download-template-section">
+              <h5 class="section-subtitle">下载模板</h5>
+              <p class="template-instruction">请先下载模板文件,按照模板格式填写商品信息后上传</p>
+              <button class="btn btn-outline download-template-btn">
+                <span class="btn-icon">↓</span>
+                下载Excel模板
+              </button>
+            </div>
+            
+            <div class="upload-file-section">
+              <h5 class="section-subtitle">上传文件</h5>
+              <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📤</div>
+                <p class="upload-text">点击上传或拖拽文件到此区域</p>
+                <p class="upload-formats">支持 .xlsx, .xls, .csv 格式文件</p>
+                <button class="btn btn-outline select-file-btn">选择文件</button>
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;" />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn btn-primary next-step-btn" id="nextStepBtn">下一步</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div id="categoryModal" class="modal-overlay" style="display: none;">
+      <div class="modal-dialog category-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">品类管理</h3>
+          <button class="modal-close" id="closeCategoryModal">&times;</button>
+        </div>
+        
+        <div class="modal-content">
+          <!-- Add New Category Section -->
+          <div class="add-category-section">
+            <h4 class="section-title">添加新品类</h4>
+            <div class="add-category-form">
+              <input type="text" id="newCategoryName" class="category-input" placeholder="请输入品类名称">
+              <button class="btn btn-primary add-category-btn" id="addCategoryBtn">+ 添加</button>
+            </div>
+          </div>
+
+          <!-- Existing Categories Section -->
+          <div class="existing-categories-section">
+            <h4 class="section-title">现有品类</h4>
+            <div class="category-table-container">
+              <table class="category-table">
+                <thead>
+                  <tr>
+                    <th>分类名称</th>
+                    <th>关联商品数</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="categoryTableBody">
+                  <!-- Categories will be populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancelCategoryBtn">取消</button>
+          <button class="btn btn-primary" id="saveCategoryBtn">确定保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="editProductModal" class="modal-overlay" style="display: none;">
+      <div class="modal-dialog edit-product-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">编辑商品信息</h3>
+          <button class="modal-close" id="closeEditModal">&times;</button>
+        </div>
+        
+        <div class="modal-content">
+          <!-- Product Basic Information -->
+          <div class="form-section">
+            <div class="form-group">
+              <label class="form-label required">
+                商品链接
+                <span class="info-icon" title="请输入商品的完整链接地址">?</span>
+              </label>
+              <input type="url" id="productLink" class="form-input" placeholder="https://detail.tmall.com/item.htm?id=..." />
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label required">
+                商品名称
+                <span class="info-icon" title="请输入商品的名称">?</span>
+              </label>
+              <div class="input-with-counter">
+                <input type="text" id="productName" class="form-input" placeholder="请输入商品名称" maxlength="80" />
+                <span class="char-counter" id="nameCounter">0/80</span>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">
+                商品封面图
+                <span class="info-icon" title="上传商品的封面图片">?</span>
+              </label>
+              <div class="image-upload-section">
+                <div class="current-image">
+                  <img id="currentImage" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iNCIgZmlsbD0iI0Y1RjVGNSIvPgo8cGF0aCBkPSJNMjAgMjBIMzBWNDBIMjBWMjBaIiBmaWxsPSIjREREREREIi8+CjxwYXRoIGQ9Ik0zMCAyMEg0MFY0MEgzMFYyMFoiIGZpbGw9IiNEREQ0REQiLz4KPC9zdmc+" alt="商品图片" />
+                </div>
+                <button class="btn btn-outline upload-image-btn">上传商品封面图</button>
+                <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Detailed Information -->
+          <div class="form-section">
+            <label class="form-label">
+              商品信息
+              <span class="info-icon" title="填写商品的详细信息">?</span>
+            </label>
+            
+            <div class="rte">
+              <div class="rte-toolbar" aria-label="富文本工具栏">
+                <button type="button" class="rte-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+                <button type="button" class="rte-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+                <button type="button" class="rte-btn" data-cmd="underline" title="下划线"><u>U</u></button>
+                <span class="rte-sep"></span>
+                <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="无序列表">•</button>
+                <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="有序列表">1.</button>
+                <span class="rte-sep"></span>
+                <button type="button" class="rte-btn" data-cmd="removeFormat" title="清除格式">清除</button>
+              </div>
+              <div id="productInfoEditor" class="rte-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="请输入内容"></div>
+              <div class="textarea-footer">
+                <span class="char-counter" id="infoCounter">0/3000</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- SKU Configuration Section -->
+          <div class="form-section">
+            <label class="form-label">
+              SKU规格配置
+              <span class="info-icon" title="可填写商品的规格信息，如颜色、容量等">?</span>
+            </label>
+            <input type="text" id="skuConfig" class="form-input" placeholder="例如：颜色: 白色；容量: 5L；型号: A001" />
+          </div>
+
+          <!-- Shops Association Section -->
+          <div class="form-section">
+            <label class="form-label">
+              关联店铺
+              <span class="info-icon" title="可多选，配置此商品关联的店铺">?</span>
+            </label>
+            <select id="shopSelect" class="form-input"></select>
+          </div>
+
+          <!-- Belong Category Selection -->
+          <div class="form-section">
+            <label class="form-label">
+              所属类别
+              <span class="info-icon" title="为该商品选择所属类别">?</span>
+            </label>
+            <select id="productCategorySelect" class="form-input"></select>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancelEditBtn">取消</button>
+          <button class="btn btn-primary" id="confirmEditBtn">确定无误</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Operation Modal -->
+    <div id="batchModal" class="modal-overlay" style="display: none;">
+      <div class="modal-dialog" style="max-width: 900px;">
+        <div class="modal-header">
+          <h3 class="modal-title">批量配置商品品类</h3>
+          <button class="modal-close" id="closeBatchModal">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="form-section">
+            <label class="form-label">说明</label>
+            <div class="instructions-box">
+              <ul class="instructions-list">
+                <li>左侧选择多个商品，右侧选择目标品类</li>
+                <li>点击“应用配置”后，所选商品将加入所选品类</li>
+              </ul>
+            </div>
+          </div>
+          <div class="transfer-container">
+            <div class="transfer-column">
+              <div class="transfer-header" id="transferProductHeader">选择商品</div>
+              <div class="transfer-search"><input type="text" id="transferProductSearch" placeholder="搜索商品"></div>
+              <div class="transfer-list" id="transferProductList"></div>
+            </div>
+            <div class="transfer-arrow">
+              <div class="arrow-icon">→</div>
+            </div>
+            <div class="transfer-column">
+              <div class="transfer-header" id="transferCategoryHeader">选择品类</div>
+              <div class="transfer-search"><input type="text" id="transferCategorySearch" placeholder="搜索品类"></div>
+              <div class="transfer-list" id="transferCategoryList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancelBatchBtn">取消</button>
+          <button class="btn btn-primary" id="applyBatchBtn">应用配置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Delete Modal -->
+    <div id="batchDeleteModal" class="modal-overlay" style="display: none;">
+      <div class="modal-dialog" style="max-width: 800px;">
+        <div class="modal-header">
+          <h3 class="modal-title">批量删除商品信息</h3>
+          <button class="modal-close" id="closeBatchDeleteModal">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="form-section">
+            <label class="form-label">说明</label>
+            <div class="instructions-box">
+              <ul class="instructions-list">
+                <li>勾选需要删除的具体商品（支持多选）</li>
+                <li>删除会从其所在的品类中移除该商品</li>
+              </ul>
+            </div>
+          </div>
+          <div class="transfer-column" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            <div class="transfer-header" id="deleteProductHeader">选择商品</div>
+            <div class="transfer-search"><input type="text" id="deleteProductSearch" placeholder="搜索商品"></div>
+            <div class="transfer-list" id="deleteProductList"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancelBatchDeleteBtn">取消</button>
+          <button class="btn btn-primary" id="applyBatchDeleteBtn">批量删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Modal -->
+    <div id="filterModal" class="modal-overlay" style="display: none;">
+      <div class="modal-dialog" style="max-width: 720px;">
+        <div class="modal-header">
+          <h3 class="modal-title">条件筛选</h3>
+          <button class="modal-close" id="closeFilterModal">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="form-section">
+            <label class="form-label">关键词</label>
+            <input id="filterKeyword" class="form-input" placeholder="商品名关键词" />
+          </div>
+          <div class="form-section">
+            <label class="form-label">所属类别</label>
+            <select id="filterCategory" class="form-input"></select>
+          </div>
+          <div class="form-section">
+            <label class="form-label">关联店铺</label>
+            <select id="filterShop" class="form-input"></select>
+          </div>
+          <div class="form-section">
+            <label class="form-label">创建时间</label>
+            <div class="grid">
+              <input id="filterStartDate" type="date" class="form-input col-6" />
+              <input id="filterEndDate" type="date" class="form-input col-6" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="resetFilterBtn">重置</button>
+          <button class="btn btn-primary" id="applyFilterBtn">应用筛选</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Detail Drawer -->
+    <div id="productDetailDrawer" class="drawer-overlay" style="display: none;">
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <h3 class="drawer-title">商品详情</h3>
+          <button class="drawer-close" id="closeProductDetailDrawer">&times;</button>
+        </div>
+        
+        <div class="drawer-body">
+          <!-- 基本信息模块 -->
+          <div class="detail-module">
+            <div class="detail-module-header">
+              <h4 class="detail-module-title">
+                <span class="module-icon">📦</span>
+                基本信息
+              </h4>
+            </div>
+            <div class="detail-module-content">
+              <div class="detail-form-group">
+                <label class="detail-form-label required">商品链接</label>
+                <div class="detail-form-input" id="detailProductLink">https://detail.tmall.com/item.htm?id=922959353039</div>
+              </div>
+              
+              <div class="detail-form-group">
+                <label class="detail-form-label required">商品名称</label>
+                <div class="detail-form-input" id="detailProductName">瓷砖修补膏</div>
+              </div>
+              
+              <div class="detail-form-group">
+                <label class="detail-form-label">商品封面图</label>
+                <div class="detail-image-upload-section">
+                  <div class="detail-current-image">
+                    <img id="detailProductImage" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iNCIgZmlsbD0iI0Y1RjVGNSIvPgo8cGF0aCBkPSJNMjAgMjBIMzBWNDBIMjBWMjBaIiBmaWxsPSIjREREREREIi8+CjxwYXRoIGQ9Ik0zMCAyMEg0MFY0MEgzMFYyMFoiIGZpbGw9IiNEREQ0REQiLz4KPC9zdmc+" alt="商品图片" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 商品信息模块 -->
+          <div class="detail-module">
+            <div class="detail-module-header">
+              <h4 class="detail-module-title">
+                <span class="module-icon">📋</span>
+                商品信息
+              </h4>
+            </div>
+            <div class="detail-module-content">
+              <div class="detail-textarea-container">
+                <div class="detail-form-textarea" id="detailProductInfo">品牌: Nabis/蜡笔派
+风格: 现代轻奢
+货号: SFD-LZL1
+款式: 盖巾式
+上市年份季节: 2025年夏季
+功能: 防尘
+功能: 防猫抓
+功能: 防滑
+功能: 其他/other
+功能: 耐磨
+材质: 雪尼尔
+适用对象: 通用</div>
+                <div class="detail-textarea-footer">
+                  <span class="detail-char-counter" id="detailInfoCounter">118/3000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- SKU规格配置模块 -->
+          <div class="detail-module">
+            <div class="detail-module-header">
+              <h4 class="detail-module-title">
+                <span class="module-icon">⚙️</span>
+                SKU规格配置
+              </h4>
+            </div>
+            <div class="detail-module-content">
+              <div class="detail-form-input" id="detailSkuConfig">例如：颜色: 白色；容量: 5L；型号: A001</div>
+            </div>
+          </div>
+
+          <!-- 关联信息模块 -->
+          <div class="detail-module">
+            <div class="detail-module-header">
+              <h4 class="detail-module-title">
+                <span class="module-icon">🔗</span>
+                关联信息
+              </h4>
+            </div>
+            <div class="detail-module-content">
+              <div class="detail-form-group">
+                <label class="detail-form-label">关联店铺</label>
+                <div class="detail-form-input" id="detailShops">立邦官方旗舰店</div>
+              </div>
+              
+              <div class="detail-form-group">
+                <label class="detail-form-label">所属类别</label>
+                <div class="detail-form-input" id="detailCategory">修补产品</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js" defer></script>
+  </body>
+  </html>
+
+
